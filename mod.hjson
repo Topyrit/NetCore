@@ -1,0 +1,8 @@
+name: "netcore"
+displayName: "NetCore Browser"
+author: "Topyrit"
+main: "netcore.NetCoreMod"
+description: "браузер карт от разных игроков"
+version: "1.0"
+minGameVersion: "147"
+java: true
