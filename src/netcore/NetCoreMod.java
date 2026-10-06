@@ -1,4 +1,3 @@
-
 package netcore;
 
 import arc.Core;
@@ -10,6 +9,8 @@ import mindustry.gen.Icon;
 import mindustry.mod.Mod;
 import mindustry.ui.Styles;
 import arc.util.serialization.JsonValue;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class NetCoreMod extends Mod {
 
@@ -164,14 +165,14 @@ public class NetCoreMod extends Mod {
 
         String[] difficulties = {"Safe", "Minimal", "Low", "Moderate", "Medium", "High", "Critical", "Extreme", "Eradication", "Unreasonable"};
         
-        final String[] selectedDiff = { "Medium" };
-        final int[] selectedStars = { 0 };
+        final AtomicReference<String> selectedDiff = new AtomicReference<>("Medium");
+        final AtomicInteger selectedStars = new AtomicInteger(0);
 
         t.add("Выбери сложность:").row();
         Table diffTable = new Table();
         for(String d : difficulties) {
             diffTable.button(d, () -> {
-                selectedDiff[0] = d;
+                selectedDiff.set(d);
                 Vars.ui.showInfoToast("Выбрано: " + d, 1f);
             }).size(110f, 40f).pad(2f);
             if(diffTable.getChildren().size % 3 == 0) diffTable.row();
@@ -183,14 +184,14 @@ public class NetCoreMod extends Mod {
         for(int i = 0; i <= 3; i++) {
             int finalI = i;
             starsTable.button(String.valueOf(i) + " ", () -> {
-                selectedStars[0] = finalI;
+                selectedStars.set(finalI);
                 Vars.ui.showInfoToast("Выбрано звезд: " + finalI, 1f);
             }).size(60f, 40f).pad(5f);
         }
         t.add(starsTable).padBottom(20f).row();
 
         edit.button("Применить изменения", Icon.ok, () -> {
-            NetCoreClient.adminReview(token, mapId, selectedDiff[0], selectedStars[0], () -> {
+            NetCoreClient.adminReview(token, mapId, selectedDiff.get(), selectedStars.get(), () -> {
                 edit.hide();
                 parentDetailsDialog.hide();
             });
@@ -199,4 +200,4 @@ public class NetCoreMod extends Mod {
         edit.addCloseButton();
         edit.show();
     }
-}
+            }
