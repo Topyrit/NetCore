@@ -49,16 +49,19 @@ public class NetCoreMod extends Mod {
         String[] modes = {"Выживание", "Атака", "ПВП", "Песочница", "Аркада"};
         
         for (String mode : modes) {
-            final String finalMode = mode;
-            t.button(finalMode, () -> {
-                dialog.hide();
-                showMapList(finalMode);
-            });
-            t.row();
+            addModeButton(t, dialog, mode);
         }
         
         dialog.addCloseButton();
         dialog.show();
+    }
+
+    private void addModeButton(Table t, Dialog dialog, String mode) {
+        t.button(mode, () -> {
+            dialog.hide();
+            showMapList(mode);
+        });
+        t.row();
     }
 
     private void showMapList(String mode) {
@@ -77,26 +80,7 @@ public class NetCoreMod extends Mod {
             }
 
             for (JsonValue map : maps) {
-                Table mapCard = new Table(Styles.black6).margin(10f);
-                
-                int id = map.getInt("id");
-                String mapName = map.getString("name");
-                String author = map.getString("author");
-                String difficulty = map.getString("difficulty"); 
-                int stars = map.getInt("stars");
-
-                String starString = "";
-                for(int s = 0; s < stars; s++) starString += "[accent][]"; 
-
-                final JsonValue finalMap = map;
-                mapCard.add("[white]" + mapName + " [][lightgray]от " + author + "[]").left().row();
-                mapCard.add("Сложность: [orange]" + difficulty + "[] | Оценка: " + (starString.isEmpty() ? "[gray]Нет[]" : starString)).left();
-                
-                mapCard.button(Icon.eye, () -> {
-                    showMapDetails(finalMap);
-                }).right().padLeft(20f);
-
-                listTable.add(mapCard).width(550f).pad(5f).row();
+                createMapCard(listTable, map);
             }
         });
 
@@ -104,8 +88,29 @@ public class NetCoreMod extends Mod {
         dialog.show();
     }
 
+    private void createMapCard(Table listTable, JsonValue map) {
+        Table mapCard = new Table(Styles.black6).margin(10f);
+        
+        String mapName = map.getString("name");
+        String author = map.getString("author");
+        String difficulty = map.getString("difficulty"); 
+        int stars = map.getInt("stars");
+
+        String starString = "";
+        for(int s = 0; s < stars; s++) starString += "[accent][]"; 
+
+        mapCard.add("[white]" + mapName + " [][lightgray]от " + author + "[]").left().row();
+        mapCard.add("Сложность: [orange]" + difficulty + "[] | Оценка: " + (starString.isEmpty() ? "[gray]Нет[]" : starString)).left();
+        
+        mapCard.button(Icon.eye, () -> {
+            showMapDetails(map);
+        }).right().padLeft(20f);
+
+        listTable.add(mapCard).width(550f).pad(5f).row();
+    }
+
     private void showMapDetails(JsonValue map) {
-        final int mapId = map.getInt("id");
+        int mapId = map.getInt("id");
         String name = map.getString("name");
         String author = map.getString("author");
         String diff = map.getString("difficulty");
@@ -114,7 +119,7 @@ public class NetCoreMod extends Mod {
         int plays = map.getInt("plays");
         String description = map.getString("description");
 
-        final Dialog dialog = new Dialog(name);
+        Dialog dialog = new Dialog(name);
         Table t = dialog.cont;
         
         t.add("Автор: [lightgray]" + author + "[]").left().row();
@@ -134,9 +139,8 @@ public class NetCoreMod extends Mod {
             Vars.ui.showInfo("Карта скачана!");
         });
         
-        final JsonValue finalMapData = map;
         buttons.button("Играть", Icon.play, () -> {
-            NetCorePlayer.playMap(finalMapData);
+            NetCorePlayer.playMap(map);
         });
         
         t.add(buttons);
@@ -151,13 +155,11 @@ public class NetCoreMod extends Mod {
         auth.cont.add("Введи секретный токен админа:").row();
         var field = auth.cont.field(savedToken, text -> {}).width(300f).row().get();
         
-        final int finalMapId = mapId;
-        final Dialog finalParentDialog = parentDetailsDialog;
         auth.button("Войти в панель", () -> {
             String enteredToken = field.getText();
             Core.settings.put("netcore-admin-token", enteredToken);
             auth.hide();
-            showAdminEditDialog(enteredToken, finalMapId, finalParentDialog);
+            showAdminEditDialog(enteredToken, mapId, parentDetailsDialog);
         }).size(200f, 50f).pad(10f);
         
         auth.addCloseButton();
@@ -165,48 +167,51 @@ public class NetCoreMod extends Mod {
     }
 
     private void showAdminEditDialog(String token, int mapId, Dialog parentDetailsDialog) {
-        final Dialog edit = new Dialog("Управление картой #" + mapId);
+        Dialog edit = new Dialog("Управление картой #" + mapId);
         Table t = edit.cont;
 
         String[] difficulties = {"Safe", "Minimal", "Low", "Moderate", "Medium", "High", "Critical", "Extreme", "Eradication", "Unreasonable"};
         
-        final AtomicReference<String> selectedDiff = new AtomicReference<>("Medium");
-        final AtomicInteger selectedStars = new AtomicInteger(0);
+        AtomicReference<String> selectedDiff = new AtomicReference<>("Medium");
+        AtomicInteger selectedStars = new AtomicInteger(0);
 
         t.add("Выбери сложность:").row();
         Table diffTable = new Table();
         for(String d : difficulties) {
-            final String finalD = d;
-            diffTable.button(finalD, () -> {
-                selectedDiff.set(finalD);
-                Vars.ui.showInfoToast("Выбрано: " + finalD, 1f);
-            }).size(110f, 40f).pad(2f);
-            if(diffTable.getChildren().size % 3 == 0) diffTable.row();
+            addDifficultyButton(diffTable, selectedDiff, d);
         }
         t.add(diffTable).padBottom(15f).row();
 
         t.add("Выбери качество (Звезды):").row();
         Table starsTable = new Table();
         for(int i = 0; i <= 3; i++) {
-            final int finalI = i;
-            starsTable.button(String.valueOf(i) + " ", () -> {
-                selectedStars.set(finalI);
-                Vars.ui.showInfoToast("Выбрано звезд: " + finalI, 1f);
-            }).size(60f, 40f).pad(5f);
+            addStarsButton(starsTable, selectedStars, i);
         }
         t.add(starsTable).padBottom(20f).row();
 
-        final String finalToken = token;
-        final int finalMapId = mapId;
-        final Dialog finalParent = parentDetailsDialog;
         edit.button("Применить изменения", Icon.ok, () -> {
-            NetCoreClient.adminReview(finalToken, finalMapId, selectedDiff.get(), selectedStars.get(), () -> {
+            NetCoreClient.adminReview(token, mapId, selectedDiff.get(), selectedStars.get(), () -> {
                 edit.hide();
-                finalParent.hide();
+                parentDetailsDialog.hide();
             });
         }).size(250f, 50f);
 
         edit.addCloseButton();
         edit.show();
+    }
+
+    private void addDifficultyButton(Table diffTable, AtomicReference<String> selectedDiff, String d) {
+        diffTable.button(d, () -> {
+            selectedDiff.set(d);
+            Vars.ui.showInfoToast("Выбрано: " + d, 1f);
+        }).size(110f, 40f).pad(2f);
+        if(diffTable.getChildren().size % 3 == 0) diffTable.row();
+    }
+
+    private void addStarsButton(Table starsTable, AtomicInteger selectedStars, int i) {
+        starsTable.button(String.valueOf(i) + " ", () -> {
+            selectedStars.set(i);
+            Vars.ui.showInfoToast("Выбрано звезд: " + i, 1f);
+        }).size(60f, 40f).pad(5f);
     }
 }
